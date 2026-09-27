@@ -49,7 +49,7 @@ such information instead of inventing a policy number. Note this is a prompt-dri
 decline surfaced in the response, not a hard threshold block.
 
 ## Setup
-1. Clone: `git clone https://github.com/jhung-cybersecurity/doc-qa-rag` then `cd doc-qa-rag`
+1. Clone: `git clone https://github.com/jhungai/doc-qa-rag` then `cd doc-qa-rag`
 2. Venv: `python -m venv venv`
 3. Activate: `venv\Scripts\Activate.ps1`
 4. Install: `pip install -r requirements.txt`
