@@ -1,10 +1,12 @@
+![CI](https://github.com/jhungai/doc-qa-rag/actions/workflows/ci.yml/badge.svg)
+
 ## DOC-QA-RAG
 This RAG ingests the insurance policy Q&A PDFs and filters irrelevant questions by thresholds followed by a second defense layer using prompts against hallucination.
 
 When the user asks a question, the service draws on PDFs that were ingested at startup: section headers are marked, split on those headers with MarkdownNodeParser so each policy section becomes its own chunk, then embedded into ChromaDB. Then it uses similarity search to retrieve the top-K chunks. If the top chunk scores below 0.45 it rejects before the LLM. Claude then answers using only the retrieved chunks via a strict prompt, and declines if they do not contain the answer.
 
 ## Stack Highlights 
-LlamaIndex, ChromaDB, local embeddings (BAAI/bge-small-en-v1.5, run on-device for zero embedding cost and document privacy), claude-sonnet-4-5-20250929, FastAPI, Docker.
+LlamaIndex, ChromaDB, local embeddings (BAAI/bge-small-en-v1.5, run on-device for zero embedding cost and document privacy), claude-sonnet-5, FastAPI, Docker, GitHub Actions.
 
 Note: Anthropic deprecated temperature for newer models, and llama-index-llms-anthropic==0.11.3 sends it by default, causing /ask to return 500. Will bump once a patched release ships.
 
@@ -114,18 +116,10 @@ When a query is blocked, `blocked: true` and `refusal_reason` indicates which de
 ## Evaluation
 There are four categories that the repo tests for. The first one is `on-topic` which tests for questions that have a direct answer from the `<sources>`. Second one is `off-topic` which tests for questions that have nothing to do with the provided `<sources>`. Third is `adversarial` tests for questions that are similar in topic but ultimately have nothing to do with it. An example of this is case #3: "policy number for life insurance". The corpus covers auto and renters insurance, not life insurance. Last but not least, `corpus_gap` where it tags questions that are genuinely not covered in `<sources>`.
 
-Current result: 10-11/11 passing, depending on the run. Retrieval is deterministic
-(identical scores every run), but the `blocked` and `refusal_reason` flags are not.
-The cause is `_detect_refusal`, which flags a refusal by substring-matching Claude's
-answer against a fixed phrase list. Claude paraphrases between runs ("I don't have
-information" vs "I don't have any information"), so the same refusal is sometimes
-detected and sometimes missed. This is a known limitation of keyword-based refusal
-detection against a generative model.
+Current result: 11/11 passing, enforced in CI. Every push to `main` runs the full eval in GitHub Actions with the API key stored as a repository secret, and the job fails if any case fails.
 
-Cases 7 and 11 use an `"any"` sentinel on those two fields, because their answers are
-genuinely absent from the corpus and any refusal is correct behavior regardless of which
-layer catches it. Their assertions rest on the answer text instead.
+Retrieval is deterministic (identical scores every run). Refusal detection is keyword-based (`_detect_refusal` substring-matches Claude's answer), which is a known limitation against a generative model and caused flaky flags in the past.
 
-Case 10 ("find whether i have permissive use in my auto policy") deliberately does NOT use
-the sentinel and flakes red on some runs. Its answer IS in the auto policy, so a decline is
-the pipeline being wrong, not an alternate valid path. The red is kept as an honest signal that refusal detection sometimes misfires on an answered query, flagging a real answer as a refusal.
+Cases 7 and 11 use an `"any"` sentinel on `blocked` and `refusal_reason`, because their answers are genuinely absent from the corpus and any refusal is correct. Case 3 expects a prompt-layer refusal: it clears the 0.45 threshold on shared vocabulary, so Layer 2 must catch it.
+
+Model migration (Nov 2026): moving from claude-sonnet-4-5 (retiring) to claude-sonnet-5 dropped the eval to 9/11. Case 3 exposed a test whose expectations contradicted each other, so the test was corrected. Case 10 ("permissive use") was a real regression: the auto policy covers it in different wording ("reasonable belief that the insured is entitled"), and the new model refused when the exact term was missing. The system prompt was updated to answer from equivalent policy wording, and the test was left strict. Result: 11/11 across repeated runs.
