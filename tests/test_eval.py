@@ -4,7 +4,10 @@
 Runs a labeled test set through ask() and produces a pass/fail report.
 Run with: python -m tests.test_eval
 """
+import sys
+
 from src.rag import ask
+
 
 # --- Test set ---
 
@@ -29,8 +32,8 @@ TEST_CASES = [
         "id": 3,
         "question": "policy number for life insurance",
         "type": "adversarial",
-        "expected_blocked": False,
-        "expected_refusal_reason": None, 
+        "expected_blocked": True,               
+        "expected_refusal_reason": "prompt",      
         "expected_phrases": [
             ["life insurance", "life"],
             ["don't have", "do not have", "no information"],
@@ -175,4 +178,5 @@ def run_eval():
     return passed, total
 
 if __name__ == "__main__":
-    run_eval()
+    passed, total = run_eval()
+    sys.exit(0 if passed == total else 1)   # fail the job unless every case passes

@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main]        # which branch?
+    branches: [main]
+  workflow_dispatch:            # adds a "Run workflow" button in the Actions tab
 
 jobs:
   check:
@@ -11,5 +12,23 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"   # which version do you use locally?
-      - run: python -m compileall src tests   # which folder holds your code?
+          python-version: "3.12"
+      - run: python -m compileall src tests
+
+  eval:
+    needs: check                # ← blank #1: run only after "check" passes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install CPU-only torch
+        run: pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run 11-case eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # ← blank #2: your secret's name
+        run: python -m tests.test_eval

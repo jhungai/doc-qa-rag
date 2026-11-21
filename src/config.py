@@ -7,7 +7,7 @@ TOP_K = 5
 
 # Models
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
-LLM_MODEL = "claude-opus-4-8"
+LLM_MODEL = "claude-sonnet-5"
 
 # ChromaDB
 CHROMA_PERSIST_PATH = "./chroma_db"
